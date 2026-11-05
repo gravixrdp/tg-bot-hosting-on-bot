@@ -179,3 +179,30 @@ async def test_supervisor_restart_bot(temp_environment):
     # Clean up
     await supervisor.stop_bot(bot_id)
 
+
+@pytest.mark.asyncio
+async def test_supervisor_shutdown_and_cleanup(temp_environment):
+    async with get_session() as session:
+        user = await get_or_create_user(session, 5005, "multi_user", "Multi User")
+        b1 = await create_hosted_bot(session, user.id, "MultiBot1", "main.py", auto_restart=False)
+        b2 = await create_hosted_bot(session, user.id, "MultiBot2", "main.py", auto_restart=False)
+
+    for b in [b1, b2]:
+        sandbox = BotSandbox(b.id)
+        ws = sandbox.ensure_workspace()
+        (ws / "main.py").write_text("import time\ntime.sleep(15)\n")
+        await supervisor.start_bot(b.id)
+        assert supervisor.is_running(b.id) is True
+
+    # Perform supervisor shutdown
+    await supervisor.shutdown()
+
+    assert supervisor.is_running(b1.id) is False
+    assert supervisor.is_running(b2.id) is False
+
+
+def test_supervisor_get_logs_empty():
+    # Non-existent bot should return empty list
+    assert supervisor.get_logs(999999) == []
+
+

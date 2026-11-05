@@ -2,9 +2,12 @@
 Unit tests for src/core/sandbox.py and Zip-Slip vulnerability prevention.
 """
 
+import asyncio
 import io
-import zipfile
 from pathlib import Path
+import stat
+from unittest.mock import AsyncMock, patch
+import zipfile
 
 import pytest
 
@@ -76,7 +79,6 @@ def test_safe_zip_slip_absolute_path_escape(temp_environment):
     # Malicious zip with absolute path
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w") as zf:
-        # Create an entry with absolute Unix path using ZipInfo to preserve leading slash
         info = zipfile.ZipInfo()
         info.filename = "/tmp/evil.txt"
         zf.writestr(info, b"payload")
@@ -87,6 +89,24 @@ def test_safe_zip_slip_absolute_path_escape(temp_environment):
         sandbox.safe_extract_zip(zip_bytes)
 
     assert "absolute path" in str(exc_info.value).lower()
+
+
+def test_safe_zip_symlink_rejection(temp_environment):
+    bot_id = 105
+    sandbox = BotSandbox(bot_id)
+
+    zip_buffer = io.BytesIO()
+    with zipfile.ZipFile(zip_buffer, "w") as zf:
+        info = zipfile.ZipInfo("symlink_entry")
+        # Set Unix symlink mode: S_IFLNK
+        info.external_attr = stat.S_IFLNK << 16
+        zf.writestr(info, "target_file")
+
+    zip_bytes = zip_buffer.getvalue()
+    with pytest.raises(SandboxSecurityError) as exc_info:
+        sandbox.safe_extract_zip(zip_bytes)
+
+    assert "symbolic link" in str(exc_info.value).lower()
 
 
 def test_list_files_and_clean_workspace(temp_environment):
@@ -111,3 +131,52 @@ def test_list_files_and_clean_workspace(temp_environment):
     cleaned = sandbox.clean_workspace()
     assert cleaned is True
     assert not ws.exists()
+
+
+@pytest.mark.asyncio
+async def test_pip_install_no_targets(temp_environment):
+    bot_id = 106
+    sandbox = BotSandbox(bot_id)
+    sandbox.ensure_workspace()
+
+    with patch.object(sandbox, "has_venv", return_value=True):
+        success, msg = await sandbox.install_requirements()
+        assert success is True
+        assert "skipping" in msg.lower()
+
+
+@pytest.mark.asyncio
+async def test_pip_install_mocked_success(temp_environment):
+    bot_id = 107
+    sandbox = BotSandbox(bot_id)
+    sandbox.ensure_workspace()
+
+    mock_process = AsyncMock()
+    mock_process.communicate.return_value = (b"Successfully installed aiogram-3.0.0\n", b"")
+    mock_process.returncode = 0
+
+    with patch.object(sandbox, "has_venv", return_value=True), \
+         patch("asyncio.create_subprocess_exec", return_value=mock_process) as mock_exec:
+        success, msg = await sandbox.install_requirements(packages=["aiogram==3.0.0"])
+        assert success is True
+        assert "Successfully installed" in msg
+        mock_exec.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_pip_install_mocked_timeout(temp_environment):
+    bot_id = 108
+    sandbox = BotSandbox(bot_id)
+    sandbox.ensure_workspace()
+
+    mock_process = AsyncMock()
+    mock_process.communicate.side_effect = asyncio.TimeoutError
+    from unittest.mock import MagicMock
+    mock_process.kill = MagicMock()
+    mock_process.wait.return_value = None
+
+    with patch.object(sandbox, "has_venv", return_value=True), \
+         patch("asyncio.create_subprocess_exec", return_value=mock_process):
+        success, msg = await sandbox.install_requirements(packages=["heavy-pkg"], timeout=1)
+        assert success is False
+        assert "timed out" in msg.lower()
