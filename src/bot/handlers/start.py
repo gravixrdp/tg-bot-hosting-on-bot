@@ -7,9 +7,9 @@ and documentation/help guides.
 
 from __future__ import annotations
 
-from aiogram import Router, types
+from aiogram import F, Router, types
 from aiogram.enums import ParseMode
-from aiogram.filters import Command, CommandStart, F
+from aiogram.filters import Command, CommandStart
 
 from src.bot.keyboards.reply import get_main_menu_keyboard
 from src.core.config import settings

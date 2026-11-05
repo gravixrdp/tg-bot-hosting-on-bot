@@ -18,7 +18,7 @@ import psutil
 from src.core.database import BotStatus, HostedBot
 
 # Telegram Bot token validation regex: e.g. 123456789:ABCdef-GHIjklMNO_pqRstUVwxyZ123456
-TOKEN_REGEX = re.compile(r"^\d{8,12}:[A-Za-z0-9_-]{35}$")
+TOKEN_REGEX = re.compile(r"^\d{8,12}:[A-Za-z0-9_-]{30,50}$")
 
 
 def format_status_badge(status: str | BotStatus) -> str:

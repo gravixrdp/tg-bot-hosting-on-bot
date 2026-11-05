@@ -112,6 +112,7 @@ async def handle_host_prompt(
     intro_text = (
         "🚀 <b>Deploy a New Telegram Bot</b>\n"
         "━━━━━━━━━━━━━━━━━━━━━━━━━\n"
+        "Choose a Deployment Method:\n"
         "Choose how you would like to supply your bot's source code:"
     )
     reply_kb = get_deployment_methods_keyboard()

@@ -92,7 +92,7 @@ async def handle_admin_dashboard(
     running_bots_count = sum(1 for b in all_bots if supervisor.is_running(b.id))
 
     panel_text = (
-        "👑 <b>Master Administration Dashboard</b>\n"
+        "👑 <b>Administrator Master Control Center</b>\n"
         "━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
         "📊 <b>Quick Platform Telemetry:</b>\n"
         f"• <b>Total Registered Users:</b> <code>{total_users_count}</code>\n"
