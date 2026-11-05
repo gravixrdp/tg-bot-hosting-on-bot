@@ -15,17 +15,20 @@ from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+_BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+
 class Settings(BaseSettings):
     """Configuration settings for the Telegram Bot Hosting Platform."""
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(_BASE_DIR / ".env", ".env"),
         env_file_encoding="utf-8",
         extra="ignore",
     )
 
     # Base application directory
-    BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
+    BASE_DIR: Path = _BASE_DIR
 
     # Telegram Hosting Bot credentials
     BOT_TOKEN: str = Field(
@@ -81,6 +84,8 @@ class Settings(BaseSettings):
     @classmethod
     def parse_admin_ids(cls, v: Any) -> List[int]:
         """Parse ADMIN_IDS from various formats (comma-separated, JSON list, or sequence)."""
+        if isinstance(v, int):
+            return [v]
         if isinstance(v, str):
             v = v.strip()
             if not v:
