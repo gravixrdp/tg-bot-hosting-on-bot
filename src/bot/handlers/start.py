@@ -58,7 +58,7 @@ async def handle_start(message: types.Message) -> None:
 
 
 @router.message(Command("help"))
-@router.message(F.text == "❓ Help & Guide")
+@router.message(F.text.in_(["❓ Help & Guide", "❓ 𝗛𝗲𝗹𝗽 & 𝗚𝘂𝗶𝗱𝗲", "❓ 𝐇𝐞𝐥𝐩 & 𝐆𝐮𝐢𝐝𝐞", "Help & Guide"]))
 async def handle_help(message: types.Message) -> None:
     """Display comprehensive usage guide and deployment instructions."""
     help_text = (

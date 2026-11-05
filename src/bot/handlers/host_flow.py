@@ -76,7 +76,7 @@ async def handle_cancel(event: types.Message | types.CallbackQuery, state: FSMCo
 
 
 @router.message(Command("host"))
-@router.message(F.text == "🚀 Host New Bot")
+@router.message(F.text.in_(["🚀 Host New Bot", "🚀 𝗛𝗼𝘀𝘁 𝗡𝗲𝘄 𝗕𝗼𝘁", "🚀 𝐇𝐨𝐬𝐭 𝐍𝐞𝐰 𝐁𝐨𝐭", "Host New Bot"]))
 @router.callback_query(F.data == "host_new_bot_action")
 async def handle_host_prompt(
     event: types.Message | types.CallbackQuery,

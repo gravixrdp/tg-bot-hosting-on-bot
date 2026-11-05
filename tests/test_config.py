@@ -9,7 +9,7 @@ from src.core.config import Settings
 
 
 def test_default_settings():
-    config = Settings()
+    config = Settings(_env_file=None)
     assert config.MAX_BOTS_PER_USER == 3
     assert config.LOG_BUFFER_SIZE == 1000
     assert config.DEFAULT_RESTART_RETRIES == 3

@@ -42,7 +42,7 @@ router = Router(name="my_bots")
 
 
 @router.message(Command("mybots"))
-@router.message(F.text == "🤖 My Bots")
+@router.message(F.text.in_(["🤖 My Bots", "🤖 𝗠𝘆 𝗕𝗼𝘁𝘀", "🤖 𝐌𝐲 𝐁𝐨𝐭𝐬", "My Bots"]))
 @router.callback_query(F.data == "back_to_my_bots")
 @router.callback_query(F.data == "refresh_bots_list")
 async def handle_my_bots(

@@ -34,7 +34,7 @@ def get_status_keyboard() -> InlineKeyboardMarkup:
 
 
 @router.message(Command("status"))
-@router.message(F.text == "📊 System Status")
+@router.message(F.text.in_(["📊 System Status", "📊 𝗦𝘆𝘀𝘁𝗲𝗺 𝗦𝘁𝗮𝘁𝘂𝘀", "📊 𝐒𝐲𝐬𝐭𝐞𝐦 𝐒𝐭𝐚𝐭𝐮𝐬", "System Status"]))
 @router.callback_query(F.data == "refresh_system_status")
 async def handle_system_status(event: types.Message | types.CallbackQuery) -> None:
     """Render comprehensive server and platform operational status."""

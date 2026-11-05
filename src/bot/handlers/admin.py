@@ -59,7 +59,7 @@ async def is_admin_authorized(user_id: int) -> bool:
 # ---------------------------------------------------------------------------
 
 @router.message(Command("admin"))
-@router.message(F.text == "👑 Admin Panel")
+@router.message(F.text.in_(["👑 Admin Panel", "👑 𝗔𝗱𝗺𝗶𝗻 𝗣𝗮𝗻𝗲𝗹", "👑 𝐀𝐝𝐦𝐢𝐧 𝐏𝐚𝐧𝐞𝐥", "Admin Panel"]))
 @router.callback_query(F.data == "admin_refresh")
 async def handle_admin_dashboard(
     event: types.Message | types.CallbackQuery,
