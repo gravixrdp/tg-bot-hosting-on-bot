@@ -29,9 +29,10 @@ from src.bot.keyboards.inline import (
     get_deployment_methods_keyboard,
     get_templates_keyboard,
 )
-from src.bot.keyboards.reply import get_main_menu_keyboard
+from src.bot.keyboards.reply import BUTTON_HOST_BOT, get_main_menu_keyboard
 from src.bot.states import HostBotStates
 from src.bot.utils import (
+    ButtonMatchFilter,
     detect_entry_point,
     format_bot_card,
     is_valid_bot_token,
@@ -76,7 +77,7 @@ async def handle_cancel(event: types.Message | types.CallbackQuery, state: FSMCo
 
 
 @router.message(Command("host"))
-@router.message(F.text.in_(["🚀 Host New Bot", "🚀 𝗛𝗼𝘀𝘁 𝗡𝗲𝘄 𝗕𝗼𝘁", "🚀 𝐇𝐨𝐬𝐭 𝐍𝐞𝐰 𝐁𝐨𝐭", "Host New Bot"]))
+@router.message(ButtonMatchFilter(BUTTON_HOST_BOT, "Host New Bot"))
 @router.callback_query(F.data == "host_new_bot_action")
 async def handle_host_prompt(
     event: types.Message | types.CallbackQuery,

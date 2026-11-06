@@ -25,8 +25,9 @@ from src.bot.keyboards.inline import (
     get_env_vars_keyboard,
     get_logs_keyboard,
 )
+from src.bot.keyboards.reply import BUTTON_MY_BOTS
 from src.bot.states import EnvVarStates
-from src.bot.utils import format_bot_card, mask_token
+from src.bot.utils import ButtonMatchFilter, format_bot_card, mask_token
 from src.core.database import (
     delete_bot,
     get_bot,
@@ -42,7 +43,7 @@ router = Router(name="my_bots")
 
 
 @router.message(Command("mybots"))
-@router.message(F.text.in_(["🤖 My Bots", "🤖 𝗠𝘆 𝗕𝗼𝘁𝘀", "🤖 𝐌𝐲 𝐁𝐨𝐭𝐬", "My Bots"]))
+@router.message(ButtonMatchFilter(BUTTON_MY_BOTS, "My Bots"))
 @router.callback_query(F.data == "back_to_my_bots")
 @router.callback_query(F.data == "refresh_bots_list")
 async def handle_my_bots(

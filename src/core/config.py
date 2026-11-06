@@ -52,6 +52,12 @@ class Settings(BaseSettings):
         description="Default maximum number of hosted bots allowed per user",
     )
 
+    # UI & Keyboard settings
+    DEFAULT_BUTTON_FONT_STYLE: str = Field(
+        default="plain",
+        description="Default Unicode font style for reply button labels ('plain', 'bold', 'monospace', 'serif_bold', 'italic')",
+    )
+
     # Process supervision & logging settings
     LOG_BUFFER_SIZE: int = Field(
         default=1000,

@@ -11,7 +11,8 @@ from aiogram import F, Router, types
 from aiogram.enums import ParseMode
 from aiogram.filters import Command, CommandStart
 
-from src.bot.keyboards.reply import get_main_menu_keyboard
+from src.bot.keyboards.reply import BUTTON_HELP_GUIDE, get_main_menu_keyboard
+from src.bot.utils import ButtonMatchFilter
 from src.core.config import settings
 from src.core.database import get_or_create_user, get_session
 
@@ -40,7 +41,11 @@ async def handle_start(message: types.Message) -> None:
         )
         is_admin = user.is_admin or is_admin_flag
 
-    reply_kb = get_main_menu_keyboard(is_admin=is_admin, telegram_id=telegram_id)
+    reply_kb = get_main_menu_keyboard(
+        is_admin=is_admin,
+        telegram_id=telegram_id,
+        font_style=settings.DEFAULT_BUTTON_FONT_STYLE,
+    )
 
     welcome_text = (
         f"👋 <b>Welcome, {full_name}!</b>\n\n"
@@ -58,7 +63,7 @@ async def handle_start(message: types.Message) -> None:
 
 
 @router.message(Command("help"))
-@router.message(F.text.in_(["❓ Help & Guide", "❓ 𝗛𝗲𝗹𝗽 & 𝗚𝘂𝗶𝗱𝗲", "❓ 𝐇𝐞𝐥𝐩 & 𝐆𝐮𝐢𝐝𝐞", "Help & Guide"]))
+@router.message(ButtonMatchFilter(BUTTON_HELP_GUIDE, "Help & Guide"))
 async def handle_help(message: types.Message) -> None:
     """Display comprehensive usage guide and deployment instructions."""
     help_text = (

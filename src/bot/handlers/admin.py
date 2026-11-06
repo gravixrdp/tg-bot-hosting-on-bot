@@ -27,8 +27,9 @@ from src.bot.keyboards.inline import (
     get_broadcast_confirm_keyboard,
     get_cancel_inline_keyboard,
 )
+from src.bot.keyboards.reply import BUTTON_ADMIN_PANEL
 from src.bot.states import AdminStates
-from src.bot.utils import format_status_badge, get_system_metrics
+from src.bot.utils import ButtonMatchFilter, format_status_badge, get_system_metrics
 from src.core.config import settings
 from src.core.database import (
     HostedBot,
@@ -59,7 +60,7 @@ async def is_admin_authorized(user_id: int) -> bool:
 # ---------------------------------------------------------------------------
 
 @router.message(Command("admin"))
-@router.message(F.text.in_(["👑 Admin Panel", "👑 𝗔𝗱𝗺𝗶𝗻 𝗣𝗮𝗻𝗲𝗹", "👑 𝐀𝐝𝐦𝐢𝐧 𝐏𝐚𝐧𝐞𝐥", "Admin Panel"]))
+@router.message(ButtonMatchFilter(BUTTON_ADMIN_PANEL, "Admin Panel"))
 @router.callback_query(F.data == "admin_refresh")
 async def handle_admin_dashboard(
     event: types.Message | types.CallbackQuery,

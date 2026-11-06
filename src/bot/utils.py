@@ -11,8 +11,11 @@ import os
 from pathlib import Path
 import re
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Sequence
+import unicodedata
 
+from aiogram import types
+from aiogram.filters import Filter
 import psutil
 
 from src.core.database import BotStatus, HostedBot
@@ -127,3 +130,140 @@ def get_system_metrics() -> Dict[str, Any]:
         "disk_percent": disk.percent,
         "uptime_str": f"{hours}h {minutes}m",
     }
+
+
+# ---------------------------------------------------------------------------
+# Font Styling, Normalization & Resilient Button Routing Utilities
+# ---------------------------------------------------------------------------
+
+SUPPORTED_FONT_STYLES = (
+    "plain",
+    "bold",
+    "sans_bold",
+    "serif_bold",
+    "monospace",
+    "mono",
+    "italic",
+    "sans_italic",
+    "script",
+)
+
+FONT_STYLE_OFFSETS: dict[str, tuple[Optional[int], Optional[int], Optional[int]]] = {
+    # (uppercase_start, lowercase_start, digit_start)
+    "bold": (0x1D5D4, 0x1D5EE, 0x1D7EC),  # Mathematical Sans-Serif Bold (A-Z, a-z, 0-9)
+    "sans_bold": (0x1D5D4, 0x1D5EE, 0x1D7EC),
+    "serif_bold": (0x1D400, 0x1D41A, 0x1D7CE),  # Mathematical Bold Serif (A-Z, a-z, 0-9)
+    "monospace": (0x1D670, 0x1D68A, 0x1D7F6),  # Mathematical Monospace (A-Z, a-z, 0-9)
+    "mono": (0x1D670, 0x1D68A, 0x1D7F6),
+    "italic": (0x1D608, 0x1D622, None),  # Mathematical Sans-Serif Italic (A-Z, a-z)
+    "sans_italic": (0x1D608, 0x1D622, None),
+    "script": (0x1D4D0, 0x1D4EA, None),  # Mathematical Bold Script (A-Z, a-z)
+}
+
+EMOJI_PATTERN = re.compile(
+    r"[\U0001F000-\U0001FAFF]|[\u2600-\u27BF]|[\u2300-\u23FF]|[\u2B50-\u2B55]|[\uFE00-\uFE0F]"
+)
+
+
+def apply_font_style(text: str, style: str = "plain") -> str:
+    """
+    Apply stylized Unicode fonts to ASCII alphanumeric characters within text.
+    Preserves emojis, symbols, whitespace, and punctuation.
+
+    Supported styles:
+    - 'plain' / 'normal': Unchanged text
+    - 'bold' / 'sans_bold': 🚀 𝗛𝗼𝘀𝘁 𝗡𝗲𝘄 𝗕𝗼𝘁
+    - 'serif_bold': 🚀 𝐇𝐨𝐬𝐭 𝐍𝐞𝐰 𝐁𝐨𝐭
+    - 'monospace' / 'mono': 🚀 𝙷𝚘𝚜𝚝 𝙽𝚎𝚠 𝙱𝚘𝚝
+    - 'italic' / 'sans_italic': 🚀 𝘏𝘰𝘴𝘵 𝘕𝘦𝘸 𝘉𝘰𝘵
+    - 'script': 🚀 𝓗𝓸𝓼𝓽 𝓝𝓮𝔀 𝓑𝓸𝓽
+    """
+    if not text:
+        return ""
+    normalized_style = (style or "plain").lower().strip()
+    if normalized_style in ("plain", "normal", "none", "standard"):
+        return text
+
+    offset_entry = FONT_STYLE_OFFSETS.get(normalized_style)
+    if not offset_entry:
+        return text
+
+    upper_base, lower_base, digit_base = offset_entry
+    result_chars: list[str] = []
+    for char in text:
+        code = ord(char)
+        if 65 <= code <= 90 and upper_base is not None:  # 'A'-'Z'
+            result_chars.append(chr(upper_base + (code - 65)))
+        elif 97 <= code <= 122 and lower_base is not None:  # 'a'-'z'
+            result_chars.append(chr(lower_base + (code - 97)))
+        elif 48 <= code <= 57 and digit_base is not None:  # '0'-'9'
+            result_chars.append(chr(digit_base + (code - 48)))
+        else:
+            result_chars.append(char)
+    return "".join(result_chars)
+
+
+def normalize_button_text(text: str) -> str:
+    """
+    Normalize stylized Unicode characters (bold, monospace, serif bold, italic, etc.)
+    back to standard ASCII/plain text using Unicode NFKC decomposition,
+    and collapse multiple whitespaces.
+    """
+    if not text:
+        return ""
+    normalized = unicodedata.normalize("NFKC", text)
+    return " ".join(normalized.split())
+
+
+def strip_emojis(text: str) -> str:
+    """Strip emoji pictographs and symbols from a text string."""
+    if not text:
+        return ""
+    return " ".join(EMOJI_PATTERN.sub("", text).split())
+
+
+def is_button_match(text: str, *targets: str) -> bool:
+    """
+    Check if a given message text matches any of the target button labels,
+    accounting for Unicode font styles (bold, monospace, serif bold, italic),
+    emoji differences, extra whitespace, and case-insensitivity.
+    """
+    if not text:
+        return False
+    norm_text = normalize_button_text(text)
+    if not norm_text:
+        return False
+
+    norm_lower = norm_text.lower()
+    clean_lower = strip_emojis(norm_text).lower()
+
+    for target in targets:
+        if not target:
+            continue
+        norm_target = normalize_button_text(target)
+        if norm_text == norm_target or norm_lower == norm_target.lower():
+            return True
+        clean_target = strip_emojis(norm_target).lower()
+        if clean_target and clean_lower == clean_target:
+            return True
+    return False
+
+
+class ButtonMatchFilter(Filter):
+    """
+    Aiogram Filter that matches incoming message text against expected button targets,
+    normalizing Unicode font styles, emoji prefixes, and case differences.
+    """
+
+    def __init__(self, *targets: str) -> None:
+        self.targets = targets
+
+    async def __call__(self, message: types.Message) -> bool:
+        if not message or not getattr(message, "text", None):
+            return False
+        return is_button_match(message.text, *self.targets)
+
+
+def button_filter(*targets: str) -> ButtonMatchFilter:
+    """Convenience factory function for ButtonMatchFilter."""
+    return ButtonMatchFilter(*targets)

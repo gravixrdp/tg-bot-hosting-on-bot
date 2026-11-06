@@ -84,8 +84,65 @@ def create_dispatcher() -> Dispatcher:
     """Create and configure the central Aiogram Dispatcher with all routers."""
     dp = Dispatcher(storage=MemoryStorage())
     for router in get_all_routers():
+        if router._parent_router is not None:
+            router._parent_router = None
         dp.include_router(router)
     return dp
+
+
+
+from aiohttp import web
+
+async def start_health_server(port: int = 7860) -> web.AppRunner:
+    """Start lightweight HTTP server for Hugging Face Spaces and UptimeRobot keep-alive."""
+    app = web.Application()
+
+    async def handle_root(request: web.Request) -> web.Response:
+        html = (
+            "<!DOCTYPE html>"
+            "<html>"
+            "<head><title>Telegram Bot Hosting Platform</title>"
+            "<meta charset='utf-8'>"
+            "<style>"
+            "body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; "
+            "background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }"
+            ".card { background: #1e293b; padding: 2.5rem; border-radius: 1rem; border: 1px solid #334155; text-align: center; max-width: 500px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3); }"
+            ".badge { background: #10b981; color: #fff; padding: 0.35rem 0.75rem; border-radius: 9999px; font-size: 0.85rem; font-weight: 600; display: inline-block; margin-bottom: 1rem; }"
+            "h1 { margin: 0 0 0.5rem; font-size: 1.75rem; }"
+            "p { color: #94a3b8; font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.5rem; }"
+            ".btn { background: #2563eb; color: #fff; text-decoration: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; display: inline-block; transition: background 0.2s; }"
+            ".btn:hover { background: #1d4ed8; }"
+            ".footer { margin-top: 1.5rem; font-size: 0.8rem; color: #64748b; }"
+            "</style>"
+            "</head>"
+            "<body>"
+            "<div class='card'>"
+            "<div class='badge'>🟢 Active & Polling</div>"
+            "<h1>Telegram Bot Hosting</h1>"
+            "<p>Production-grade nested Telegram Bot Hosting Platform running on Hugging Face Spaces (16 GB RAM • 2 vCPU).</p>"
+            "<a class='btn' href='https://t.me/hermes_esyiczoumzicemfa_bot' target='_blank'>Open Master Bot in Telegram 🚀</a>"
+            "<div class='footer'>Health Check Active • Keep-Alive Pings Enabled</div>"
+            "</div>"
+            "</body>"
+            "</html>"
+        )
+        return web.Response(text=html, content_type="text/html")
+
+    async def handle_health(request: web.Request) -> web.Response:
+        return web.json_response({
+            "status": "healthy",
+            "service": "telegram-bot-hosting-platform",
+            "uptime_robot": "ok",
+        })
+
+    app.router.add_get("/", handle_root)
+    app.router.add_get("/health", handle_health)
+
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+    return runner
 
 
 async def main() -> None:
@@ -112,6 +169,15 @@ async def main() -> None:
     # 3. Hook real-time supervisor crash alerting
     await setup_crash_callback(bot)
 
+    # 4. Start HTTP Health & Dashboard server for Hugging Face Spaces and UptimeRobot
+    server_port = int(os.getenv("PORT", "7860"))
+    http_runner = None
+    try:
+        http_runner = await start_health_server(server_port)
+        logger.info("HTTP Health Check server started on 0.0.0.0:%s", server_port)
+    except Exception as exc:
+        logger.warning("Could not start HTTP health server on port %s: %s", server_port, exc)
+
     logger.info("Starting Master Bot polling loop...")
     try:
         # Delete any pending webhook updates before starting polling
@@ -121,6 +187,8 @@ async def main() -> None:
         logger.info("Shutdown signal received.")
     finally:
         logger.info("Shutting down bot process supervisor and closing sessions...")
+        if http_runner:
+            await http_runner.cleanup()
         await supervisor.shutdown()
         await bot.session.close()
         await close_db()

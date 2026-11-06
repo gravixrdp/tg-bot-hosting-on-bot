@@ -1,3 +1,13 @@
+---
+title: Telegram Bot Hosting Platform
+emoji: 🚀
+colorFrom: blue
+colorTo: purple
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # Telegram Bot Hosting on Bot (tg-bot-hosting-on-bot)
 
 A scalable, asynchronous platform that allows users to deploy, run, supervise, and monitor their custom Telegram bots directly through a Telegram host management interface.

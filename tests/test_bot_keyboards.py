@@ -187,3 +187,51 @@ def test_broadcast_and_crash_alert_keyboards():
     cancel_kb = get_cancel_inline_keyboard()
     cancel_callbacks = [btn.callback_data for row in cancel_kb.inline_keyboard for btn in row]
     assert "cancel_flow" in cancel_callbacks
+
+
+def test_main_menu_keyboard_font_styles():
+    from src.bot.keyboards.reply import get_main_menu_buttons, get_main_menu_keyboard
+    from src.bot.utils import normalize_button_text
+
+    for style in ["bold", "monospace", "serif_bold", "italic", "plain"]:
+        kb = get_main_menu_keyboard(is_admin=True, font_style=style)
+        buttons = [btn.text for row in kb.keyboard for btn in row]
+        assert len(buttons) == 5
+        # Verify all buttons normalize back to the canonical plain texts
+        normalized = [normalize_button_text(b) for b in buttons]
+        assert "🚀 Host New Bot" in normalized
+        assert "🤖 My Bots" in normalized
+        assert "📊 System Status" in normalized
+        assert "❓ Help & Guide" in normalized
+        assert "👑 Admin Panel" in normalized
+
+    # Helper function check
+    btn_list = get_main_menu_buttons(is_admin=False, font_style="bold")
+    assert len(btn_list) == 4
+    assert any("𝗛𝗼𝘀𝘁" in b for b in btn_list)
+
+
+def test_inline_keyboards_font_styles():
+    from src.bot.keyboards.inline import (
+        get_admin_menu_keyboard,
+        get_bot_control_keyboard,
+        get_deployment_methods_keyboard,
+        get_templates_keyboard,
+    )
+
+    deploy_kb = get_deployment_methods_keyboard(font_style="bold")
+    deploy_texts = [btn.text for row in deploy_kb.inline_keyboard for btn in row]
+    assert any("𝗭𝗶𝗽" in t for t in deploy_texts)
+
+    tpl_kb = get_templates_keyboard(font_style="monospace")
+    tpl_texts = [btn.text for row in tpl_kb.inline_keyboard for btn in row]
+    assert any("𝙱𝚘𝚝" in t for t in tpl_texts)
+
+    ctrl_kb = get_bot_control_keyboard(bot_id=1, is_running=True, font_style="bold")
+    ctrl_texts = [btn.text for row in ctrl_kb.inline_keyboard for btn in row]
+    assert any("𝗦𝘁𝗼𝗽" in t for t in ctrl_texts)
+
+    admin_kb = get_admin_menu_keyboard(font_style="italic")
+    admin_texts = [btn.text for row in admin_kb.inline_keyboard for btn in row]
+    assert any("𝘗𝘭𝘢𝘵𝘧𝘰𝘳𝘮" in t for t in admin_texts)
+

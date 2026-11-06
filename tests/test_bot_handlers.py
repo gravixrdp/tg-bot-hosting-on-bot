@@ -254,3 +254,124 @@ async def test_setup_crash_callback(temp_environment):
     assert "FaultyBot" in call_kwargs["text"]
     assert "137" in call_kwargs["text"]
     assert "Segmentation fault" in call_kwargs["text"]
+
+
+@pytest.mark.asyncio
+async def test_reply_buttons_filter_matching_all_styles():
+    """Verify ButtonMatchFilter matches all reply buttons across multiple font styles."""
+    from src.bot.keyboards.reply import (
+        BUTTON_ADMIN_PANEL,
+        BUTTON_HELP_GUIDE,
+        BUTTON_HOST_BOT,
+        BUTTON_MY_BOTS,
+        BUTTON_SYSTEM_STATUS,
+    )
+    from src.bot.utils import ButtonMatchFilter, apply_font_style
+
+    buttons_and_plain = [
+        (BUTTON_HOST_BOT, "Host New Bot"),
+        (BUTTON_MY_BOTS, "My Bots"),
+        (BUTTON_SYSTEM_STATUS, "System Status"),
+        (BUTTON_HELP_GUIDE, "Help & Guide"),
+        (BUTTON_ADMIN_PANEL, "Admin Panel"),
+    ]
+
+    styles = ["plain", "bold", "sans_bold", "monospace", "serif_bold", "italic"]
+
+    for btn_canonical, plain_title in buttons_and_plain:
+        filt = ButtonMatchFilter(btn_canonical, plain_title)
+
+        # 1. Test across all Unicode font styles with emoji
+        for s in styles:
+            styled_text = apply_font_style(btn_canonical, s)
+            msg = make_mock_message(text=styled_text)
+            assert await filt(msg) is True, f"Failed match on style '{s}' for button '{btn_canonical}'"
+
+        # 2. Test text without emoji
+        msg_plain = make_mock_message(text=plain_title)
+        assert await filt(msg_plain) is True
+
+        # 3. Test lowercase text without emoji
+        msg_lower = make_mock_message(text=plain_title.lower())
+        assert await filt(msg_lower) is True
+
+        # 4. Test styled text without emoji
+        msg_styled_no_emoji = make_mock_message(text=apply_font_style(plain_title, "bold"))
+        assert await filt(msg_styled_no_emoji) is True
+
+
+@pytest.mark.asyncio
+async def test_dispatcher_routes_styled_button_messages(temp_environment):
+    """Verify that the full Aiogram Dispatcher routes styled Unicode messages to the correct handler."""
+    from datetime import datetime, timezone
+    from src.bot.keyboards.reply import (
+        BUTTON_HELP_GUIDE,
+        BUTTON_HOST_BOT,
+        BUTTON_MY_BOTS,
+        BUTTON_SYSTEM_STATUS,
+    )
+    from src.bot.utils import apply_font_style
+
+    dp = create_dispatcher()
+    mock_bot = AsyncMock(spec=Bot)
+
+    with patch.object(types.Message, "answer", new_callable=AsyncMock) as mock_answer:
+        async def send_simulated_message(user_id: int, text: str):
+            mock_answer.reset_mock()
+            msg = types.Message(
+                message_id=100,
+                date=datetime.now(timezone.utc),
+                chat=types.Chat(id=user_id, type="private"),
+                from_user=types.User(id=user_id, is_bot=False, first_name="Tester", username="tester"),
+                text=text,
+            )
+            update = types.Update(update_id=1, message=msg)
+            await dp.feed_update(mock_bot, update)
+            return mock_answer
+
+        # 1. Bold Host New Bot -> routed to host flow
+        ans_host = await send_simulated_message(
+            778001,
+            apply_font_style(BUTTON_HOST_BOT, "bold"),
+        )
+        ans_host.assert_called_once()
+        assert "Deploy a New Telegram Bot" in ans_host.call_args[0][0]
+
+        # 2. Monospace My Bots -> routed to my_bots handler
+        ans_bots = await send_simulated_message(
+            778002,
+            apply_font_style(BUTTON_MY_BOTS, "monospace"),
+        )
+        ans_bots.assert_called_once()
+        assert "My Hosted Bots" in ans_bots.call_args[0][0]
+
+        # 3. Serif Bold System Status -> routed to status handler
+        ans_status = await send_simulated_message(
+            778003,
+            apply_font_style(BUTTON_SYSTEM_STATUS, "serif_bold"),
+        )
+        ans_status.assert_called_once()
+        assert "System & Platform Diagnostics" in ans_status.call_args[0][0]
+
+        # 4. Italic Help & Guide -> routed to help handler
+        ans_help = await send_simulated_message(
+            778004,
+            apply_font_style(BUTTON_HELP_GUIDE, "italic"),
+        )
+        ans_help.assert_called_once()
+        assert "Platform Guide" in ans_help.call_args[0][0]
+
+        # 5. Bold Admin Panel -> routed to admin handler for admin user
+        original_admins = list(settings.ADMIN_IDS)
+        settings.ADMIN_IDS = [778005]
+        try:
+            ans_admin = await send_simulated_message(
+                778005,
+                apply_font_style("👑 Admin Panel", "bold"),
+            )
+            ans_admin.assert_called_once()
+            assert "Administrator Master Control Center" in ans_admin.call_args[0][0]
+        finally:
+            settings.ADMIN_IDS = original_admins
+
+

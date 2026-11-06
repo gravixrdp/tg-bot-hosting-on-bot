@@ -16,9 +16,23 @@ from src.bot.keyboards.inline import (
     get_logs_keyboard,
     get_templates_keyboard,
 )
-from src.bot.keyboards.reply import get_main_menu_keyboard
+from src.bot.keyboards.reply import (
+    BUTTON_ADMIN_PANEL,
+    BUTTON_HELP_GUIDE,
+    BUTTON_HOST_BOT,
+    BUTTON_MY_BOTS,
+    BUTTON_SYSTEM_STATUS,
+    get_main_menu_buttons,
+    get_main_menu_keyboard,
+)
 
 __all__ = [
+    "BUTTON_HOST_BOT",
+    "BUTTON_MY_BOTS",
+    "BUTTON_SYSTEM_STATUS",
+    "BUTTON_HELP_GUIDE",
+    "BUTTON_ADMIN_PANEL",
+    "get_main_menu_buttons",
     "get_main_menu_keyboard",
     "get_deployment_methods_keyboard",
     "get_templates_keyboard",

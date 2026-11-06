@@ -12,7 +12,8 @@ from aiogram.enums import ParseMode
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
-from src.bot.utils import get_system_metrics
+from src.bot.keyboards.reply import BUTTON_SYSTEM_STATUS
+from src.bot.utils import ButtonMatchFilter, get_system_metrics
 from src.core.database import get_all_bots, get_or_create_user, get_session, get_user_bots
 from src.core.supervisor import supervisor
 
@@ -34,7 +35,7 @@ def get_status_keyboard() -> InlineKeyboardMarkup:
 
 
 @router.message(Command("status"))
-@router.message(F.text.in_(["📊 System Status", "📊 𝗦𝘆𝘀𝘁𝗲𝗺 𝗦𝘁𝗮𝘁𝘂𝘀", "📊 𝐒𝐲𝐬𝐭𝐞𝐦 𝐒𝐭𝐚𝐭𝐮𝐬", "System Status"]))
+@router.message(ButtonMatchFilter(BUTTON_SYSTEM_STATUS, "System Status"))
 @router.callback_query(F.data == "refresh_system_status")
 async def handle_system_status(event: types.Message | types.CallbackQuery) -> None:
     """Render comprehensive server and platform operational status."""
