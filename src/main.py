@@ -119,7 +119,7 @@ async def start_health_server(port: int = 7860) -> web.AppRunner:
             "<div class='card'>"
             "<div class='badge'>🟢 Active & Polling</div>"
             "<h1>Telegram Bot Hosting</h1>"
-            "<p>Production-grade nested Telegram Bot Hosting Platform powered by GRAVIXHOST (@gravixhostbot).</p>"
+            "<p>Production-grade nested Telegram Bot Hosting Platform powered by GRAVIXHOST (@gravixhostbot) running on Hugging Face Spaces (16 GB RAM • 2 vCPU).</p>"
             "<a class='btn' href='https://t.me/gravixhostbot' target='_blank'>Open Master Bot in Telegram 🚀</a>"
             "<div class='footer'>Health Check Active • Keep-Alive Pings Enabled</div>"
             "</div>"
