@@ -25,6 +25,7 @@ share/python-wheels/
 .installed.cfg
 MANIFEST
 tg-bot-hosting-deploy.zip
+gravixhost_deploy.zip
 
 # Virtual environments
 venv/
